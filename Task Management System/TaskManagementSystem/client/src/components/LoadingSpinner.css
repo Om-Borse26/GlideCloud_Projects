@@ -1,0 +1,93 @@
+.loadingOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-base);
+  z-index: 9999;
+  animation: fadeInOverlay 0.3s ease;
+}
+
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.loadingSpinnerWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.loadingInline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.spinner {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.spinnerRing {
+  position: absolute;
+  inset: 0;
+  border: 3px solid transparent;
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.spinnerRing:nth-child(1) {
+  animation-delay: -0.45s;
+  border-top-color: var(--color-primary);
+}
+
+.spinnerRing:nth-child(2) {
+  animation-delay: -0.3s;
+  border-top-color: var(--color-secondary);
+  border-width: 2.5px;
+}
+
+.spinnerRing:nth-child(3) {
+  animation-delay: -0.15s;
+  border-top-color: var(--color-accent);
+  border-width: 2px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingMessage {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

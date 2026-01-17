@@ -1,0 +1,21 @@
+package com.glideclouds.taskmanagementsystem.tasks;
+
+public enum TaskActivityType {
+    CREATED,
+    UPDATED,
+    MOVED,
+    REORDERED,
+    COMMENTED,
+    ASSIGNED,
+    COMPLETED,
+    RECURRENCE_NEXT_CREATED,
+    LABELS_UPDATED,
+    CHECKLIST_UPDATED,
+    DECISION_ADDED,
+    TIMER_STARTED,
+    TIMER_STOPPED,
+    FOCUS_UPDATED,
+    TIME_BUDGET_UPDATED,
+    RECURRENCE_UPDATED,
+    DEPENDENCIES_UPDATED
+}

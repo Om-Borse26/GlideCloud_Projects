@@ -1,0 +1,59 @@
+package com.glideclouds.taskmanagementsystem.auth;
+
+import com.glideclouds.taskmanagementsystem.auth.dto.AuthResponse;
+import com.glideclouds.taskmanagementsystem.auth.dto.LoginRequest;
+import com.glideclouds.taskmanagementsystem.auth.dto.RegisterRequest;
+import com.glideclouds.taskmanagementsystem.security.JwtService;
+import com.glideclouds.taskmanagementsystem.users.Role;
+import com.glideclouds.taskmanagementsystem.users.User;
+import com.glideclouds.taskmanagementsystem.users.UserRepository;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import static org.springframework.http.HttpStatus.CONFLICT;
+
+@Service
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
+
+    public AuthService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       AuthenticationManager authenticationManager,
+                       JwtService jwtService) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
+    }
+
+    public void register(RegisterRequest request) {
+        String email = request.email().trim().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
+            throw new ResponseStatusException(CONFLICT, "Email already registered");
+        }
+
+        String hash = passwordEncoder.encode(request.password());
+        User user = new User(email, hash, Role.USER);
+        userRepository.save(user);
+    }
+
+    public AuthResponse login(LoginRequest request) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.email(), request.password())
+        );
+
+        // Authentication succeeded; load user to issue JWT with userId as subject.
+        User user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+
+        return new AuthResponse(jwtService.generateToken(user));
+    }
+}

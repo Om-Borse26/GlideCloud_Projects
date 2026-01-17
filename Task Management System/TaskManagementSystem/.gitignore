@@ -1,0 +1,73 @@
+.gradle
+build/
+
+# OS / tooling junk
+.DS_Store
+Thumbs.db
+
+# Generated docs (we keep the root README.md instead)
+backend/HELP.md
+
+# Env (never commit secrets)
+.env
+*.env
+.env.*
+backend/.env
+backend/.env.*
+client/.env
+client/.env.*
+!.env.example
+!backend/.env.example
+!client/.env.example
+
+# Logs
+logs/
+*.log
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+### Node / Vite ###
+client/node_modules/
+client/dist/
+client/.vite/
+client/.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+### Gradle / Spring Boot (backend) ###
+backend/.gradle/
+backend/build/
+backend/out/
