@@ -27,7 +27,7 @@ The project is designed for real workflow use: task planning (Board/Calendar/Tim
   - Archived page shows archived items with unarchive
 - Offline-friendly UX (client queues requests when offline and replays when online)
 - Admin dashboard (ADMIN role): global tasks overview + group/user assignment
-- Optional email notifications and optional AI template-assist endpoints
+- Optional email notifications
 
 ## Prerequisites
 
@@ -102,7 +102,6 @@ Optional:
 
 - CLIENT_BASE_URL (used to build links in emails)
 - MAIL_ENABLED / MAIL_FROM / SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD
-- AI_ENABLED / AI_PROVIDER / AI_API_KEY
 - ADMIN_EMAIL / ADMIN_PASSWORD (local bootstrap only; do not use in production)
 
 ### Client (client/.env.example)
@@ -139,7 +138,6 @@ Primary routes:
   - PUT /{id}/recurrence
 - /api/analytics (overview + trends)
 - /api/admin (ADMIN role)
-- /api/ai (template-only by default)
 
 ## Task Archiving (Board vs Timeline)
 
