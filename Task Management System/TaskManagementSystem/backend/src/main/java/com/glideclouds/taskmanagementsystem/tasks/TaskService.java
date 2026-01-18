@@ -1,25 +1,5 @@
 package com.glideclouds.taskmanagementsystem.tasks;
 
-import com.glideclouds.taskmanagementsystem.tasks.dto.CreateTaskRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.BulkTaskActionRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.ReorderChecklistRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.MoveTaskRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.TaskResponse;
-import com.glideclouds.taskmanagementsystem.tasks.dto.TimerNoteRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateTaskRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateChecklistItemRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateFocusRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateArchivedRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateRecurrenceRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateTimeBudgetRequest;
-import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateDependenciesRequest;
-import com.glideclouds.taskmanagementsystem.security.SecurityUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,7 +13,30 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.springframework.http.HttpStatus.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.FORBIDDEN;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.glideclouds.taskmanagementsystem.security.SecurityUtils;
+import com.glideclouds.taskmanagementsystem.tasks.dto.BulkTaskActionRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.CreateTaskRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.MoveTaskRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.ReorderChecklistRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.TaskResponse;
+import com.glideclouds.taskmanagementsystem.tasks.dto.TimerNoteRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateArchivedRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateChecklistItemRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateDependenciesRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateFocusRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateRecurrenceRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateTaskRequest;
+import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateTimeBudgetRequest;
 
 @Service
 /**

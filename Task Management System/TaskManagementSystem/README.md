@@ -7,6 +7,28 @@ An end-to-end task management app built as a monorepo:
 
 The project is designed for real workflow use: task planning (Board/Calendar/Timeline), insight (Analytics), admin tooling, and a polished UI (light/dark themes).
 
+---
+
+## Screenshots & UI Overview
+
+Below are screenshots of the main features and pages of the Task Management System. This section helps you quickly visualize the app's capabilities and UI.
+
+| Page / Feature         | Screenshot                                           |
+| ---------------------- | ---------------------------------------------------- |
+| Login Page             | ![Login Page](images/LoginPage.png)                  |
+| Admin Dashboard        | ![Admin Dashboard 1](images/AdminDashboardPage1.png) |
+| Admin Dashboard        | ![Admin Dashboard 2](images/AdminDashboardPage2.png) |
+| Task Board (Kanban)    | ![Task Board](images/TaskBoardPage.png)              |
+| Drag & Drop            | ![Drag & Drop](images/Drag_and_Drop.png)             |
+| Task Description Modal | ![Task Description](images/TaskDecriptionModal.png)  |
+| Focus Mode             | ![Focus Mode](images/FocusMode.png)                  |
+| Calendar View          | ![Calendar](images/Calender.png)                     |
+| Timeline View          | ![Timeline](images/TimelinePage.png)                 |
+| Analytics              | ![Analytics](images/AnalyticsPage.png)               |
+| Archive Page           | ![Archive](images/Archivepage.png)                   |
+
+---
+
 ## Repo Layout
 
 - backend/ — Spring Boot API (Gradle wrapper included)
