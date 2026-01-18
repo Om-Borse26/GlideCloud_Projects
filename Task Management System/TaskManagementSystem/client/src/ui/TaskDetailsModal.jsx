@@ -133,7 +133,7 @@ export default function TaskDetailsModal({
     setCommentInput("");
     setDecisionInput("");
     setTimeBudgetInput(
-      timeBudgetMinutes == null ? "" : String(timeBudgetMinutes)
+      timeBudgetMinutes == null ? "" : String(timeBudgetMinutes),
     );
     const r = task?.recurrence || null;
     setRecurrenceDraft(() => ({
@@ -190,8 +190,6 @@ export default function TaskDetailsModal({
   if (!open || !task) return null;
 
   const dueDate = task?.dueDate ? formatDateTime(task.dueDate) : "";
-
-  const isAdminAssigned = Boolean(task.assigned);
 
   async function safeRun(fn) {
     if (!fn) return;
@@ -277,13 +275,13 @@ export default function TaskDetailsModal({
                         <button
                           type="button"
                           className="labelChipX"
-                          disabled={busy || isAdminAssigned}
+                          disabled={busy}
                           onClick={() =>
                             safeRun(() =>
                               onUpdateLabels(
                                 taskId,
-                                labels.filter((x) => x !== l)
-                              )
+                                labels.filter((x) => x !== l),
+                              ),
                             )
                           }
                           aria-label={`Remove label ${l}`}
@@ -322,10 +320,10 @@ export default function TaskDetailsModal({
                     placeholder="Add label…"
                     value={labelInput}
                     maxLength={24}
-                    disabled={busy || isAdminAssigned}
+                    disabled={busy}
                     onChange={(e) => setLabelInput(e.target.value)}
                   />
-                  <button type="submit" disabled={busy || isAdminAssigned}>
+                  <button type="submit" disabled={busy}>
                     Add
                   </button>
                 </form>
@@ -351,13 +349,13 @@ export default function TaskDetailsModal({
                         <button
                           type="button"
                           className="secondary"
-                          disabled={busy || isAdminAssigned}
+                          disabled={busy}
                           onClick={() =>
                             safeRun(() =>
                               onUpdateDependencies(
                                 taskId,
-                                blockedByTaskIds.filter((id) => id !== b.id)
-                              )
+                                blockedByTaskIds.filter((id) => id !== b.id),
+                              ),
                             )
                           }
                         >
@@ -377,14 +375,14 @@ export default function TaskDetailsModal({
                     className="input"
                     placeholder="Search tasks to block on…"
                     value={depQuery}
-                    disabled={busy || isAdminAssigned}
+                    disabled={busy}
                     onChange={(e) => setDepQuery(e.target.value)}
                   />
                   <div className="inlineRow">
                     <select
                       className="select"
                       value={depPickId}
-                      disabled={busy || isAdminAssigned}
+                      disabled={busy}
                       onChange={(e) => setDepPickId(e.target.value)}
                     >
                       <option value="">Pick dependency…</option>
@@ -396,7 +394,7 @@ export default function TaskDetailsModal({
                     </select>
                     <button
                       type="button"
-                      disabled={!depPickId || busy || isAdminAssigned}
+                      disabled={!depPickId || busy}
                       onClick={() =>
                         safeRun(async () => {
                           await onUpdateDependencies(taskId, [
@@ -429,7 +427,7 @@ export default function TaskDetailsModal({
                   <button
                     type="button"
                     className="secondary"
-                    disabled={busy || isAdminAssigned}
+                    disabled={busy}
                     onClick={() =>
                       safeRun(() => onUpdateFocus(taskId, !task.focus))
                     }
@@ -443,7 +441,7 @@ export default function TaskDetailsModal({
                     <button
                       type="button"
                       className="secondary"
-                      disabled={busy || isAdminAssigned}
+                      disabled={busy}
                       onClick={() => safeRun(() => onStopTimer(taskId, null))}
                     >
                       Stop timer
@@ -452,7 +450,7 @@ export default function TaskDetailsModal({
                     <button
                       type="button"
                       className="secondary"
-                      disabled={busy || isAdminAssigned}
+                      disabled={busy}
                       onClick={() => safeRun(() => onStartTimer(taskId))}
                     >
                       Start timer
@@ -486,10 +484,10 @@ export default function TaskDetailsModal({
                     inputMode="numeric"
                     placeholder="Time budget (minutes)"
                     value={timeBudgetInput}
-                    disabled={busy || isAdminAssigned}
+                    disabled={busy}
                     onChange={(e) => setTimeBudgetInput(e.target.value)}
                   />
-                  <button type="submit" disabled={busy || isAdminAssigned}>
+                  <button type="submit" disabled={busy}>
                     Save
                   </button>
                 </form>
@@ -533,7 +531,7 @@ export default function TaskDetailsModal({
                     <select
                       className="select"
                       value={recurrenceDraft.frequency || ""}
-                      disabled={busy || isAdminAssigned}
+                      disabled={busy}
                       onChange={(e) => {
                         const v = e.target.value || null;
                         setRecurrenceDraft((prev) => ({
@@ -556,7 +554,7 @@ export default function TaskDetailsModal({
                           inputMode="numeric"
                           placeholder="Interval"
                           value={recurrenceDraft.interval ?? ""}
-                          disabled={busy || isAdminAssigned}
+                          disabled={busy}
                           onChange={(e) =>
                             setRecurrenceDraft((prev) => ({
                               ...prev,
@@ -569,7 +567,7 @@ export default function TaskDetailsModal({
                           <input
                             type="checkbox"
                             checked={Boolean(recurrenceDraft.weekdaysOnly)}
-                            disabled={busy || isAdminAssigned}
+                            disabled={busy}
                             onChange={(e) =>
                               setRecurrenceDraft((prev) => ({
                                 ...prev,
@@ -604,7 +602,7 @@ export default function TaskDetailsModal({
                             <input
                               type="checkbox"
                               checked={checked}
-                              disabled={busy || isAdminAssigned}
+                              disabled={busy}
                               onChange={(e) => {
                                 const next = e.target.checked
                                   ? [...days, d]
@@ -634,7 +632,7 @@ export default function TaskDetailsModal({
                             ? ""
                             : String(recurrenceDraft.nthBusinessDayOfMonth)
                         }
-                        disabled={busy || isAdminAssigned}
+                        disabled={busy}
                         onChange={(e) =>
                           setRecurrenceDraft((prev) => ({
                             ...prev,
@@ -654,7 +652,7 @@ export default function TaskDetailsModal({
                         className="input"
                         type="date"
                         value={recurrenceDraft.endDate || ""}
-                        disabled={busy || isAdminAssigned}
+                        disabled={busy}
                         onChange={(e) =>
                           setRecurrenceDraft((prev) => ({
                             ...prev,
@@ -667,7 +665,7 @@ export default function TaskDetailsModal({
                     <button
                       type="button"
                       className="secondary"
-                      disabled={busy || isAdminAssigned}
+                      disabled={busy}
                       onClick={() =>
                         safeRun(async () => {
                           const payload = recurrenceDraft.frequency
@@ -679,7 +677,7 @@ export default function TaskDetailsModal({
                                     ? 1
                                     : Number(recurrenceDraft.interval),
                                 weekdaysOnly: Boolean(
-                                  recurrenceDraft.weekdaysOnly
+                                  recurrenceDraft.weekdaysOnly,
                                 ),
                                 daysOfWeek:
                                   recurrenceDraft.frequency === "WEEKLY"
@@ -692,7 +690,7 @@ export default function TaskDetailsModal({
                                   recurrenceDraft.nthBusinessDayOfMonth == null
                                     ? null
                                     : Number(
-                                        recurrenceDraft.nthBusinessDayOfMonth
+                                        recurrenceDraft.nthBusinessDayOfMonth,
                                       ),
                               }
                             : { frequency: null };
@@ -721,15 +719,13 @@ export default function TaskDetailsModal({
                       <input
                         type="checkbox"
                         checked={Boolean(it.done)}
-                        disabled={
-                          busy || isAdminAssigned || !onUpdateChecklistItem
-                        }
+                        disabled={busy || !onUpdateChecklistItem}
                         onChange={(e) =>
                           safeRun(() =>
                             onUpdateChecklistItem?.(taskId, it.id, {
                               done: e.target.checked,
                               text: it.text,
-                            })
+                            }),
                           )
                         }
                       />
@@ -764,10 +760,10 @@ export default function TaskDetailsModal({
                     className="input"
                     placeholder="Add checklist item…"
                     value={checklistInput}
-                    disabled={busy || isAdminAssigned}
+                    disabled={busy}
                     onChange={(e) => setChecklistInput(e.target.value)}
                   />
-                  <button type="submit" disabled={busy || isAdminAssigned}>
+                  <button type="submit" disabled={busy}>
                     Add
                   </button>
                 </form>
@@ -788,12 +784,17 @@ export default function TaskDetailsModal({
                     .sort(
                       (a, b) =>
                         new Date(a.createdAt).getTime() -
-                        new Date(b.createdAt).getTime()
+                        new Date(b.createdAt).getTime(),
                     )
                     .map((d) => (
                       <div key={d.id} className="commentItem">
                         <div className="commentHeader">
-                          <strong>Decision</strong>
+                          <div className="commentHeaderLeft">
+                            <strong className="commentAuthor">
+                              {d.authorEmail || "User"}
+                            </strong>
+                            <span className="muted small">Decision</span>
+                          </div>
                           <span className="muted small">
                             {formatDateTime(d.createdAt)}
                           </span>
@@ -823,10 +824,10 @@ export default function TaskDetailsModal({
                     className="input"
                     placeholder="Add decision…"
                     value={decisionInput}
-                    disabled={busy || isAdminAssigned}
+                    disabled={busy}
                     onChange={(e) => setDecisionInput(e.target.value)}
                   />
-                  <button type="submit" disabled={busy || isAdminAssigned}>
+                  <button type="submit" disabled={busy}>
                     Add
                   </button>
                 </form>
@@ -846,7 +847,7 @@ export default function TaskDetailsModal({
                     className="input"
                     placeholder="Write a comment…"
                     value={commentInput}
-                    disabled={busy || isAdminAssigned}
+                    disabled={busy}
                     onChange={(e) => setCommentInput(e.target.value)}
                   />
                   <div className="commentComposerActions">
@@ -855,7 +856,7 @@ export default function TaskDetailsModal({
                     </div>
                     <button
                       type="button"
-                      disabled={!commentInput.trim() || busy || isAdminAssigned}
+                      disabled={!commentInput.trim() || busy}
                       onClick={() =>
                         safeRun(async () => {
                           await onAddComment(taskId, commentInput.trim());
@@ -876,12 +877,17 @@ export default function TaskDetailsModal({
                     .sort(
                       (a, b) =>
                         new Date(a.createdAt).getTime() -
-                        new Date(b.createdAt).getTime()
+                        new Date(b.createdAt).getTime(),
                     )
                     .map((c) => (
                       <div key={c.id} className="commentItem">
                         <div className="commentHeader">
-                          <strong>Comment</strong>
+                          <div className="commentHeaderLeft">
+                            <strong className="commentAuthor">
+                              {c.authorEmail || "User"}
+                            </strong>
+                            <span className="muted small">Comment</span>
+                          </div>
                           <span className="muted small">
                             {formatDateTime(c.createdAt)}
                           </span>
@@ -1560,15 +1566,18 @@ export default function TaskDetailsModal({
                     )
                     .map((d) => (
                       <div key={d.id} className="commentItem">
-                        <div className="commentMeta">
-                          <span className="muted small">
-                            {d.authorEmail || ""}
-                          </span>
+                        <div className="commentHeader">
+                          <div className="commentHeaderLeft">
+                            <strong className="commentAuthor">
+                              {d.authorEmail || "User"}
+                            </strong>
+                            <span className="muted small">Decision</span>
+                          </div>
                           <span className="muted small">
                             {formatDateTime(d.createdAt)}
                           </span>
                         </div>
-                        <div>{d.message}</div>
+                        <div className="commentMessage">{d.message}</div>
                       </div>
                     ))}
                 </div>

@@ -24,15 +24,18 @@ public class AdminService {
     private final TaskRepository taskRepository;
     private final GroupRepository groupRepository;
     private final NotificationService notificationService;
+    private final TaskDiscussionRepository taskDiscussionRepository;
 
     public AdminService(UserRepository userRepository,
                         TaskRepository taskRepository,
                         GroupRepository groupRepository,
-                        NotificationService notificationService) {
+                        NotificationService notificationService,
+                        TaskDiscussionRepository taskDiscussionRepository) {
         this.userRepository = userRepository;
         this.taskRepository = taskRepository;
         this.groupRepository = groupRepository;
         this.notificationService = notificationService;
+        this.taskDiscussionRepository = taskDiscussionRepository;
     }
 
     public GroupResponse createGroup(String adminUserId, CreateGroupRequest request) {
@@ -66,7 +69,7 @@ public class AdminService {
         User assignee = userRepository.findByEmail(request.assigneeEmail().trim().toLowerCase())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Assignee not found"));
 
-        Task created = createAssignedTask(adminUserId, assignee.getId(), request.title(), request.description(), request.priority(), request.dueDate());
+        Task created = createAssignedTask(adminUserId, assignee.getId(), request.title(), request.description(), request.priority(), request.dueDate(), null);
         notificationService.taskAssigned(assignee, created);
         return created;
     }
@@ -79,9 +82,13 @@ public class AdminService {
                 .stream()
                 .collect(Collectors.toMap(User::getId, Function.identity()));
 
+        // One shared discussion for all assignees so they can coordinate via comments/decisions.
+        String discussionId = UUID.randomUUID().toString();
+        taskDiscussionRepository.save(new TaskDiscussion(discussionId));
+
         List<Task> created = new ArrayList<>();
         for (String userId : group.getMemberUserIds()) {
-            Task t = createAssignedTask(adminUserId, userId, request.title(), request.description(), request.priority(), request.dueDate());
+            Task t = createAssignedTask(adminUserId, userId, request.title(), request.description(), request.priority(), request.dueDate(), discussionId);
             User assignee = usersById.get(userId);
             if (assignee != null) {
                 notificationService.taskAssigned(assignee, t);
@@ -128,7 +135,8 @@ public class AdminService {
                                    String title,
                                    String description,
                                    TaskPriority priority,
-                                   java.time.LocalDate dueDate) {
+                                   java.time.LocalDate dueDate,
+                                   String sharedDiscussionId) {
         int nextPosition = nextPositionFor(assigneeUserId, TaskStatus.TODO, true);
 
         Task task = new Task();
@@ -141,6 +149,7 @@ public class AdminService {
         task.setStatus(TaskStatus.TODO);
         task.setPinned(true);
         task.setPosition(nextPosition);
+        task.setSharedDiscussionId(sharedDiscussionId);
 
         TaskActivity a = new TaskActivity();
         a.setId(UUID.randomUUID().toString());

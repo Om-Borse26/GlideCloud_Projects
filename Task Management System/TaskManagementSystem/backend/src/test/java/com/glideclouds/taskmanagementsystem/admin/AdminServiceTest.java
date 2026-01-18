@@ -18,6 +18,7 @@ import com.glideclouds.taskmanagementsystem.notifications.NotificationService;
 import com.glideclouds.taskmanagementsystem.tasks.Task;
 import com.glideclouds.taskmanagementsystem.tasks.TaskActivityType;
 import com.glideclouds.taskmanagementsystem.tasks.TaskPriority;
+import com.glideclouds.taskmanagementsystem.tasks.TaskDiscussionRepository;
 import com.glideclouds.taskmanagementsystem.tasks.TaskRepository;
 import com.glideclouds.taskmanagementsystem.tasks.TaskStatus;
 import com.glideclouds.taskmanagementsystem.users.User;
@@ -31,8 +32,9 @@ class AdminServiceTest {
         TaskRepository taskRepository = mock(TaskRepository.class);
         GroupRepository groupRepository = mock(GroupRepository.class);
         NotificationService notificationService = mock(NotificationService.class);
+        TaskDiscussionRepository taskDiscussionRepository = mock(TaskDiscussionRepository.class);
 
-        AdminService service = new AdminService(userRepository, taskRepository, groupRepository, notificationService);
+        AdminService service = new AdminService(userRepository, taskRepository, groupRepository, notificationService, taskDiscussionRepository);
 
         User assignee = new User("user@example.com", "hash", com.glideclouds.taskmanagementsystem.users.Role.USER);
         assignee.setId("assignee-1");

@@ -21,7 +21,8 @@ class TaskServiceTest {
     @Test
     void updateArchived_archivesAndSetsArchivedAt() {
         TaskRepository repo = mock(TaskRepository.class);
-        TaskService service = new TaskService(repo);
+        TaskDiscussionRepository discussionRepo = mock(TaskDiscussionRepository.class);
+        TaskService service = new TaskService(repo, discussionRepo);
 
         String userId = "u1";
         Task t = task("t1", userId, TaskStatus.TODO, 0);
@@ -41,7 +42,8 @@ class TaskServiceTest {
     @Test
     void updateArchived_unarchivesAndClearsArchivedAt() {
         TaskRepository repo = mock(TaskRepository.class);
-        TaskService service = new TaskService(repo);
+        TaskDiscussionRepository discussionRepo = mock(TaskDiscussionRepository.class);
+        TaskService service = new TaskService(repo, discussionRepo);
 
         String userId = "u1";
         Task t = task("t1", userId, TaskStatus.DONE, 0);
@@ -61,7 +63,8 @@ class TaskServiceTest {
     @Test
     void listForUser_autoArchivesDoneTasksOlderThanCutoff() {
         TaskRepository repo = mock(TaskRepository.class);
-        TaskService service = new TaskService(repo);
+        TaskDiscussionRepository discussionRepo = mock(TaskDiscussionRepository.class);
+        TaskService service = new TaskService(repo, discussionRepo);
         ReflectionTestUtils.setField(service, "archiveDoneAfterDays", 1L);
 
         String userId = "u1";
@@ -90,7 +93,8 @@ class TaskServiceTest {
     @Test
     void moveAcrossColumns_reindexesBothColumns() {
         TaskRepository repo = mock(TaskRepository.class);
-        TaskService service = new TaskService(repo);
+        TaskDiscussionRepository discussionRepo = mock(TaskDiscussionRepository.class);
+        TaskService service = new TaskService(repo, discussionRepo);
 
         String userId = "u1";
 
@@ -120,7 +124,8 @@ class TaskServiceTest {
     @Test
     void reorderWithinColumn_reindexesPositions() {
         TaskRepository repo = mock(TaskRepository.class);
-        TaskService service = new TaskService(repo);
+        TaskDiscussionRepository discussionRepo = mock(TaskDiscussionRepository.class);
+        TaskService service = new TaskService(repo, discussionRepo);
 
         String userId = "u1";
 
@@ -144,7 +149,8 @@ class TaskServiceTest {
     @Test
     void search_matchesCommentMessages() {
         TaskRepository repo = mock(TaskRepository.class);
-        TaskService service = new TaskService(repo);
+        TaskDiscussionRepository discussionRepo = mock(TaskDiscussionRepository.class);
+        TaskService service = new TaskService(repo, discussionRepo);
 
         String userId = "u1";
 
@@ -167,7 +173,8 @@ class TaskServiceTest {
     @Test
     void updateDependencies_savesBlockedByTaskIds() {
         TaskRepository repo = mock(TaskRepository.class);
-        TaskService service = new TaskService(repo);
+        TaskDiscussionRepository discussionRepo = mock(TaskDiscussionRepository.class);
+        TaskService service = new TaskService(repo, discussionRepo);
 
         String userId = "u1";
 
@@ -188,7 +195,8 @@ class TaskServiceTest {
     @Test
     void updateDependencies_rejectsMissingDependencyTask() {
         TaskRepository repo = mock(TaskRepository.class);
-        TaskService service = new TaskService(repo);
+        TaskDiscussionRepository discussionRepo = mock(TaskDiscussionRepository.class);
+        TaskService service = new TaskService(repo, discussionRepo);
 
         String userId = "u1";
         Task t = task("t-main", userId, TaskStatus.TODO, 0);

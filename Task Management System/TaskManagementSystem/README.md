@@ -67,6 +67,49 @@ Default dev URLs:
 - Frontend: http://localhost:5173
 - Mongo-express (optional): http://localhost:8082
 
+## Docker (Recommended)
+
+This repo includes a production-style Docker setup:
+
+- React build served by nginx on http://localhost:5173
+- nginx proxies `/api` to the backend container (same-origin), so you avoid most CORS friction
+
+Start everything:
+
+```powershell
+cd "c:\Practice Work\Projects\Task Management System\TaskManagementSystem"
+docker compose up -d --build
+```
+
+Check status:
+
+```powershell
+docker compose ps
+```
+
+Stop containers:
+
+```powershell
+docker compose down
+```
+
+Reset the database (deletes Mongo volume):
+
+```powershell
+docker compose down -v
+```
+
+Docker URLs:
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8081
+- Mongo-express: http://localhost:8082
+
+Notes:
+
+- Data persistence: MongoDB uses a named volume (`mongo_data`). Your users/tasks persist across restarts. If you run `docker compose down -v`, the volume is removed and all data is wiped.
+- Admin bootstrap (Docker): set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as environment variables for the backend (recommended via a local root `.env`, never commit). On startup the backend will create/promote that user to ADMIN automatically.
+
 ## Environment Variables
 
 This repo supports local .env files for convenience. Never commit real secrets.

@@ -14,6 +14,10 @@ export default function TaskCard({
   onToggleSelected,
   dndDisabled = false,
 }) {
+  const isAssigned = Boolean(task.assigned);
+  const isPinned = Boolean(task.pinned);
+  const dragDisabled = Boolean(dndDisabled || isAssigned);
+
   const {
     attributes,
     listeners,
@@ -23,7 +27,7 @@ export default function TaskCard({
     isDragging,
   } = useSortable({
     id: task.id,
-    disabled: dndDisabled,
+    disabled: dragDisabled,
   });
 
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -31,9 +35,6 @@ export default function TaskCard({
   const { activeTaskId, running, elapsedSeconds, start, stop, resume, clear } =
     useFocusTimer();
   const isActiveTimer = activeTaskId === task.id;
-
-  const isAssigned = Boolean(task.assigned);
-  const isPinned = Boolean(task.pinned);
 
   const labels = Array.isArray(task.labels) ? task.labels : [];
   const checklistDone = Number(task.checklistDone || 0);
@@ -67,9 +68,9 @@ export default function TaskCard({
       }`}
     >
       <div
-        className={`taskTop ${isAssigned || dndDisabled ? "noDrag" : ""}`}
-        {...(!dndDisabled ? attributes : {})}
-        {...(!dndDisabled ? listeners : {})}
+        className={`taskTop ${dragDisabled ? "noDrag" : ""}`}
+        {...(!dragDisabled ? attributes : {})}
+        {...(!dragDisabled ? listeners : {})}
       >
         <strong className="taskTitle">{task.title}</strong>
         <div className="taskBadges">
@@ -77,7 +78,7 @@ export default function TaskCard({
           {isPinned ? <span className="tag pinned">Pinned</span> : null}
           <span
             className={`priority ${String(
-              task.priority || "MEDIUM"
+              task.priority || "MEDIUM",
             ).toLowerCase()}`}
           >
             {task.priority}

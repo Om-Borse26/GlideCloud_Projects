@@ -1496,6 +1496,17 @@ a.analyticsListItem:focus-visible {
   margin-bottom: 0.35rem;
 }
 
+.commentHeaderLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.commentAuthor {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
 .commentMessage {
   white-space: pre-wrap;
   color: var(--color-text-secondary);

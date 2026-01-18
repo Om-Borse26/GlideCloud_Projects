@@ -13,6 +13,9 @@ import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateArchivedRequest;
 import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateRecurrenceRequest;
 import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateTimeBudgetRequest;
 import com.glideclouds.taskmanagementsystem.tasks.dto.UpdateDependenciesRequest;
+import com.glideclouds.taskmanagementsystem.security.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -41,7 +44,10 @@ import static org.springframework.http.HttpStatus.*;
  */
 public class TaskService {
 
+    private static final Logger log = LoggerFactory.getLogger(TaskService.class);
+
     private final TaskRepository taskRepository;
+    private final TaskDiscussionRepository taskDiscussionRepository;
 
     @Value("${tasks.archive.done-after-days:1}")
     private long archiveDoneAfterDays;
@@ -54,8 +60,9 @@ public class TaskService {
     private static final int MAX_LABELS = 20;
     private static final int MAX_DEPENDENCIES = 20;
 
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(TaskRepository taskRepository, TaskDiscussionRepository taskDiscussionRepository) {
         this.taskRepository = taskRepository;
+        this.taskDiscussionRepository = taskDiscussionRepository;
     }
 
     /**
@@ -65,7 +72,7 @@ public class TaskService {
         List<Task> tasks = taskRepository.findByOwnerUserId(userId);
         maybeAutoArchiveDoneTasks(tasks);
         tasks.sort(taskComparator());
-        return tasks.stream().map(TaskMapper::toResponse).toList();
+        return toResponsesWithSharedDiscussions(tasks);
     }
 
     /** Returns a single task, enforcing owner access. */
@@ -74,7 +81,7 @@ public class TaskService {
         if (!userId.equals(task.getOwnerUserId())) {
             throw new ResponseStatusException(FORBIDDEN, "Forbidden");
         }
-        return TaskMapper.toResponse(task);
+        return toResponseWithSharedDiscussion(task);
     }
 
     /** Archives/unarchives a task for the owner and maintains archivedAt consistently. */
@@ -94,7 +101,8 @@ public class TaskService {
             task.setArchivedAt(null);
         }
         appendActivity(task, TaskActivityType.UPDATED, userId, null, archived ? "Task archived" : "Task unarchived", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     /** Creates a new TODO task for the user at the end of the TODO column. */
@@ -115,7 +123,7 @@ public class TaskService {
         appendActivity(task, TaskActivityType.CREATED, userId, null, "Task created", null, null);
 
         Task saved = taskRepository.save(task);
-        return TaskMapper.toResponse(saved);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     /** Updates editable fields on a user-owned task (title/description/priority/dueDate). */
@@ -123,10 +131,6 @@ public class TaskService {
         Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Task not found"));
         if (!userId.equals(task.getOwnerUserId())) {
             throw new ResponseStatusException(FORBIDDEN, "Forbidden");
-        }
-
-        if (isAssignedFromAdmin(task)) {
-            throw new ResponseStatusException(FORBIDDEN, "Admin-assigned tasks cannot be edited by the assignee");
         }
 
         task.setTitle(request.title());
@@ -138,7 +142,8 @@ public class TaskService {
 
         appendActivity(task, TaskActivityType.UPDATED, userId, null, "Task updated", null, null);
 
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     /** Adds a comment (owner/creator/admin) and appends activity. */
@@ -164,18 +169,32 @@ public class TaskService {
         c.setMessage(trimmed);
         c.setCreatedAt(Instant.now());
 
-        if (task.getComments() == null) {
-            task.setComments(new ArrayList<>());
-        }
-        task.getComments().add(c);
+        if (task.getSharedDiscussionId() != null && !task.getSharedDiscussionId().isBlank()) {
+            TaskDiscussion discussion = taskDiscussionRepository.findById(task.getSharedDiscussionId())
+                    .orElseGet(() -> new TaskDiscussion(task.getSharedDiscussionId()));
+            if (discussion.getComments() == null) {
+                discussion.setComments(new ArrayList<>());
+            }
+            discussion.getComments().add(c);
+            if (discussion.getComments().size() > MAX_COMMENTS) {
+                discussion.setComments(discussion.getComments().subList(discussion.getComments().size() - MAX_COMMENTS, discussion.getComments().size()));
+            }
+            taskDiscussionRepository.save(discussion);
+        } else {
+            if (task.getComments() == null) {
+                task.setComments(new ArrayList<>());
+            }
+            task.getComments().add(c);
 
-        if (task.getComments().size() > MAX_COMMENTS) {
-            task.setComments(task.getComments().subList(task.getComments().size() - MAX_COMMENTS, task.getComments().size()));
+            if (task.getComments().size() > MAX_COMMENTS) {
+                task.setComments(task.getComments().subList(task.getComments().size() - MAX_COMMENTS, task.getComments().size()));
+            }
         }
 
         appendActivity(task, TaskActivityType.COMMENTED, userId, userEmail, "Comment added", null, null);
 
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public void deleteForUser(String userId, String taskId) {
@@ -185,7 +204,7 @@ public class TaskService {
         }
 
         if (isAssignedFromAdmin(task)) {
-            throw new ResponseStatusException(FORBIDDEN, "Admin-assigned tasks cannot be deleted by the assignee");
+            throw new ResponseStatusException(FORBIDDEN, "Assigned tasks cannot be deleted");
         }
         taskRepository.delete(task);
 
@@ -223,23 +242,18 @@ public class TaskService {
         if (!userId.equals(task.getOwnerUserId())) {
             throw new ResponseStatusException(FORBIDDEN, "Forbidden");
         }
-        if (isAssignedFromAdmin(task)) {
-            throw new ResponseStatusException(FORBIDDEN, "Admin-assigned tasks cannot be edited by the assignee");
-        }
 
         boolean focus = request.focus();
         task.setFocus(focus);
         appendActivity(task, TaskActivityType.FOCUS_UPDATED, userId, null, focus ? "Marked as focus" : "Unmarked as focus", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public TaskResponse updateTimeBudgetForUser(String userId, String taskId, UpdateTimeBudgetRequest request) {
         Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Task not found"));
         if (!userId.equals(task.getOwnerUserId())) {
             throw new ResponseStatusException(FORBIDDEN, "Forbidden");
-        }
-        if (isAssignedFromAdmin(task)) {
-            throw new ResponseStatusException(FORBIDDEN, "Admin-assigned tasks cannot be edited by the assignee");
         }
 
         Integer budget = request.timeBudgetMinutes();
@@ -248,7 +262,8 @@ public class TaskService {
         }
         task.setTimeBudgetMinutes(budget);
         appendActivity(task, TaskActivityType.TIME_BUDGET_UPDATED, userId, null, "Time budget updated", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public TaskResponse updateRecurrenceForUser(String userId, String taskId, UpdateRecurrenceRequest request) {
@@ -256,14 +271,12 @@ public class TaskService {
         if (!userId.equals(task.getOwnerUserId())) {
             throw new ResponseStatusException(FORBIDDEN, "Forbidden");
         }
-        if (isAssignedFromAdmin(task)) {
-            throw new ResponseStatusException(FORBIDDEN, "Admin-assigned tasks cannot be edited by the assignee");
-        }
 
         if (request.frequency() == null) {
             task.setRecurrence(null);
             appendActivity(task, TaskActivityType.RECURRENCE_UPDATED, userId, null, "Recurrence cleared", null, null);
-            return TaskMapper.toResponse(taskRepository.save(task));
+            Task saved = taskRepository.save(task);
+            return toResponseWithSharedDiscussion(saved);
         }
 
         RecurrenceRule rule = task.getRecurrence() == null ? new RecurrenceRule() : task.getRecurrence();
@@ -281,16 +294,14 @@ public class TaskService {
 
         task.setRecurrence(rule);
         appendActivity(task, TaskActivityType.RECURRENCE_UPDATED, userId, null, "Recurrence updated", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public TaskResponse updateDependenciesForUser(String userId, String taskId, UpdateDependenciesRequest request) {
         Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Task not found"));
         if (!userId.equals(task.getOwnerUserId())) {
             throw new ResponseStatusException(FORBIDDEN, "Forbidden");
-        }
-        if (isAssignedFromAdmin(task)) {
-            throw new ResponseStatusException(FORBIDDEN, "Admin-assigned tasks cannot be edited by the assignee");
         }
 
         List<String> cleaned = new ArrayList<>();
@@ -319,16 +330,14 @@ public class TaskService {
 
         task.setBlockedByTaskIds(cleaned);
         appendActivity(task, TaskActivityType.DEPENDENCIES_UPDATED, userId, null, "Dependencies updated", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public TaskResponse updateLabelsForUser(String userId, String taskId, List<String> labels) {
         Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Task not found"));
         if (!userId.equals(task.getOwnerUserId())) {
             throw new ResponseStatusException(FORBIDDEN, "Forbidden");
-        }
-        if (isAssignedFromAdmin(task)) {
-            throw new ResponseStatusException(FORBIDDEN, "Admin-assigned tasks cannot be edited by the assignee");
         }
 
         List<String> cleaned = new ArrayList<>();
@@ -349,16 +358,14 @@ public class TaskService {
 
         task.setLabels(cleaned);
         appendActivity(task, TaskActivityType.LABELS_UPDATED, userId, null, "Labels updated", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public TaskResponse addChecklistItemForUser(String userId, String taskId, String text) {
         Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Task not found"));
         if (!userId.equals(task.getOwnerUserId())) {
             throw new ResponseStatusException(FORBIDDEN, "Forbidden");
-        }
-        if (isAssignedFromAdmin(task)) {
-            throw new ResponseStatusException(FORBIDDEN, "Admin-assigned tasks cannot be edited by the assignee");
         }
 
         String trimmed = text == null ? "" : text.trim();
@@ -383,16 +390,14 @@ public class TaskService {
         task.getChecklist().add(item);
 
         appendActivity(task, TaskActivityType.CHECKLIST_UPDATED, userId, null, "Checklist updated", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public TaskResponse updateChecklistItemForUser(String userId, String taskId, String itemId, UpdateChecklistItemRequest request) {
         Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Task not found"));
         if (!userId.equals(task.getOwnerUserId())) {
             throw new ResponseStatusException(FORBIDDEN, "Forbidden");
-        }
-        if (isAssignedFromAdmin(task)) {
-            throw new ResponseStatusException(FORBIDDEN, "Admin-assigned tasks cannot be edited by the assignee");
         }
 
         if (task.getChecklist() == null || task.getChecklist().isEmpty()) {
@@ -416,16 +421,14 @@ public class TaskService {
         }
 
         appendActivity(task, TaskActivityType.CHECKLIST_UPDATED, userId, null, "Checklist updated", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public TaskResponse reorderChecklistForUser(String userId, String taskId, ReorderChecklistRequest request) {
         Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Task not found"));
         if (!userId.equals(task.getOwnerUserId())) {
             throw new ResponseStatusException(FORBIDDEN, "Forbidden");
-        }
-        if (isAssignedFromAdmin(task)) {
-            throw new ResponseStatusException(FORBIDDEN, "Admin-assigned tasks cannot be edited by the assignee");
         }
 
         if (task.getChecklist() == null) {
@@ -457,7 +460,8 @@ public class TaskService {
         }
 
         appendActivity(task, TaskActivityType.CHECKLIST_UPDATED, userId, null, "Checklist reordered", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public TaskResponse addDecision(String userId, String userEmail, boolean isAdmin, String taskId, String message) {
@@ -475,23 +479,38 @@ public class TaskService {
             throw new ResponseStatusException(BAD_REQUEST, "Message is required");
         }
 
-        if (task.getDecisions() == null) {
-            task.setDecisions(new ArrayList<>());
-        }
         TaskDecision d = new TaskDecision();
         d.setId(UUID.randomUUID().toString());
         d.setAuthorUserId(userId);
         d.setAuthorEmail(userEmail == null ? "" : userEmail);
         d.setMessage(trimmed);
         d.setCreatedAt(Instant.now());
-        task.getDecisions().add(d);
 
-        if (task.getDecisions().size() > MAX_DECISIONS) {
-            task.setDecisions(task.getDecisions().subList(task.getDecisions().size() - MAX_DECISIONS, task.getDecisions().size()));
+        if (task.getSharedDiscussionId() != null && !task.getSharedDiscussionId().isBlank()) {
+            TaskDiscussion discussion = taskDiscussionRepository.findById(task.getSharedDiscussionId())
+                    .orElseGet(() -> new TaskDiscussion(task.getSharedDiscussionId()));
+            if (discussion.getDecisions() == null) {
+                discussion.setDecisions(new ArrayList<>());
+            }
+            discussion.getDecisions().add(d);
+            if (discussion.getDecisions().size() > MAX_DECISIONS) {
+                discussion.setDecisions(discussion.getDecisions().subList(discussion.getDecisions().size() - MAX_DECISIONS, discussion.getDecisions().size()));
+            }
+            taskDiscussionRepository.save(discussion);
+        } else {
+            if (task.getDecisions() == null) {
+                task.setDecisions(new ArrayList<>());
+            }
+            task.getDecisions().add(d);
+
+            if (task.getDecisions().size() > MAX_DECISIONS) {
+                task.setDecisions(task.getDecisions().subList(task.getDecisions().size() - MAX_DECISIONS, task.getDecisions().size()));
+            }
         }
 
         appendActivity(task, TaskActivityType.DECISION_ADDED, userId, userEmail, "Decision added", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public TaskResponse startTimerForUser(String userId, String taskId, @org.springframework.lang.Nullable TimerNoteRequest request) {
@@ -504,7 +523,8 @@ public class TaskService {
         }
         task.setActiveTimerStartedAt(Instant.now());
         appendActivity(task, TaskActivityType.TIMER_STARTED, userId, null, "Timer started", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
     }
 
     public TaskResponse stopTimerForUser(String userId, String taskId, @org.springframework.lang.Nullable TimerNoteRequest request) {
@@ -538,7 +558,92 @@ public class TaskService {
 
         task.setActiveTimerStartedAt(null);
         appendActivity(task, TaskActivityType.TIMER_STOPPED, userId, null, "Timer stopped", null, null);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        return toResponseWithSharedDiscussion(saved);
+    }
+
+    private List<TaskResponse> toResponsesWithSharedDiscussions(List<Task> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> ids = tasks.stream()
+                .map(Task::getSharedDiscussionId)
+                .filter(s -> s != null && !s.isBlank())
+                .collect(Collectors.toSet());
+
+        Map<String, TaskDiscussion> byId = ids.isEmpty()
+                ? Map.of()
+                : taskDiscussionRepository.findAllById(ids).stream().collect(Collectors.toMap(TaskDiscussion::getId, d -> d));
+
+        return tasks.stream()
+                .map(t -> {
+                    TaskResponse base = TaskMapper.toResponse(t);
+                    String discussionId = t.getSharedDiscussionId();
+                    if (discussionId == null || discussionId.isBlank()) return base;
+                    TaskDiscussion discussion = byId.get(discussionId);
+                    if (discussion == null) return base;
+                    return withSharedDiscussion(base, discussion);
+                })
+                .toList();
+    }
+
+    private TaskResponse toResponseWithSharedDiscussion(Task task) {
+        TaskResponse base = TaskMapper.toResponse(task);
+        String discussionId = task.getSharedDiscussionId();
+        if (discussionId == null || discussionId.isBlank()) {
+            return base;
+        }
+        TaskDiscussion discussion = taskDiscussionRepository.findById(discussionId).orElse(null);
+        if (discussion == null) {
+            return base;
+        }
+        return withSharedDiscussion(base, discussion);
+    }
+
+    private static TaskResponse withSharedDiscussion(TaskResponse base, TaskDiscussion discussion) {
+        List<com.glideclouds.taskmanagementsystem.tasks.dto.TaskCommentResponse> comments = (discussion.getComments() == null ? List.<TaskComment>of() : discussion.getComments())
+                .stream()
+                .sorted(Comparator.comparing(TaskComment::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(c -> new com.glideclouds.taskmanagementsystem.tasks.dto.TaskCommentResponse(c.getId(), c.getAuthorUserId(), c.getAuthorEmail(), c.getMessage(), c.getCreatedAt()))
+                .toList();
+
+        List<com.glideclouds.taskmanagementsystem.tasks.dto.TaskDecisionResponse> decisions = (discussion.getDecisions() == null ? List.<TaskDecision>of() : discussion.getDecisions())
+                .stream()
+                .sorted(Comparator.comparing(TaskDecision::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(d -> new com.glideclouds.taskmanagementsystem.tasks.dto.TaskDecisionResponse(d.getId(), d.getAuthorUserId(), d.getAuthorEmail(), d.getMessage(), d.getCreatedAt()))
+                .toList();
+
+        return new com.glideclouds.taskmanagementsystem.tasks.dto.TaskResponse(
+                base.id(),
+                base.title(),
+                base.description(),
+                base.status(),
+                base.priority(),
+                base.dueDate(),
+                base.position(),
+                base.assigned(),
+                base.pinned(),
+                base.archived(),
+                base.archivedAt(),
+                base.labels(),
+                base.blockedByTaskIds(),
+                base.checklist(),
+                base.checklistDone(),
+                base.checklistTotal(),
+                base.recurrence(),
+                decisions,
+                base.focus(),
+                base.timeBudgetMinutes(),
+                base.totalLoggedMinutes(),
+                base.timeLogs(),
+                base.activeTimerStartedAt(),
+                comments,
+                base.activity(),
+                base.completedAt(),
+                base.createdAt(),
+                base.updatedAt()
+        );
     }
 
     public List<TaskResponse> bulkForUser(String userId, BulkTaskActionRequest request) {
@@ -662,7 +767,12 @@ public class TaskService {
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Task not found"));
 
         if (!userId.equals(task.getOwnerUserId())) {
-            throw new ResponseStatusException(FORBIDDEN, "Forbidden");
+            boolean isAdmin = SecurityUtils.currentHasRole("ADMIN");
+            if (!isAdmin) {
+                log.warn("Forbidden move attempt: taskId={}, userId={}, ownerUserId={}, from={}, to={}",
+                        request.taskId(), userId, task.getOwnerUserId(), request.fromStatus(), request.toStatus());
+                throw new ResponseStatusException(FORBIDDEN, "Forbidden");
+            }
         }
 
         if (task.getStatus() != request.fromStatus()) {

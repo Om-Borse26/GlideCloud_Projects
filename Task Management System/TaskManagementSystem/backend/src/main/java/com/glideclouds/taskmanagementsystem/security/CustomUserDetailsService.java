@@ -1,11 +1,12 @@
 package com.glideclouds.taskmanagementsystem.security;
 
-import com.glideclouds.taskmanagementsystem.users.User;
-import com.glideclouds.taskmanagementsystem.users.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
+import com.glideclouds.taskmanagementsystem.users.User;
+import com.glideclouds.taskmanagementsystem.users.UserRepository;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -18,7 +19,8 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(username)
+        String email = username.trim().toLowerCase();
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         return new CustomUserDetails(user.getId(), user.getEmail(), user.getPasswordHash(), user.getRole());

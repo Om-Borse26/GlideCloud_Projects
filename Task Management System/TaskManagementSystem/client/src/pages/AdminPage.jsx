@@ -86,7 +86,7 @@ export default function AdminPage() {
   });
 
   const [layoutMode, setLayoutMode] = useState(
-    () => localStorage.getItem("admin:layoutMode") === "1"
+    () => localStorage.getItem("admin:layoutMode") === "1",
   );
   const [panelOrder, setPanelOrder] = useState(() => {
     try {
@@ -109,7 +109,7 @@ export default function AdminPage() {
   }, [panelOrder]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
   const orderedPanels = useMemo(() => {
@@ -322,10 +322,23 @@ export default function AdminPage() {
     setError("");
     setSuccess("");
 
+    const assigneeEmail = String(assignToUser.assigneeEmail || "")
+      .trim()
+      .toLowerCase();
+    const title = String(assignToUser.title || "").trim();
+    if (!assigneeEmail) {
+      setError("Assignee email is required");
+      return;
+    }
+    if (!title) {
+      setError("Title is required");
+      return;
+    }
+
     try {
       await api.post("/api/admin/tasks/assign/user", {
-        assigneeEmail: assignToUser.assigneeEmail,
-        title: assignToUser.title,
+        assigneeEmail,
+        title,
         description: assignToUser.description,
         priority: assignToUser.priority,
         dueDate: normalizeDueDate(assignToUser.dueDate),
@@ -549,6 +562,8 @@ export default function AdminPage() {
                           <label>
                             Assignee email
                             <input
+                              type="email"
+                              required
                               value={assignToUser.assigneeEmail}
                               onChange={(e) =>
                                 setAssignToUser((p) => ({
@@ -561,6 +576,7 @@ export default function AdminPage() {
                           <label>
                             Title
                             <input
+                              required
                               value={assignToUser.title}
                               onChange={(e) =>
                                 setAssignToUser((p) => ({
@@ -835,7 +851,7 @@ export default function AdminPage() {
                     <td>
                       <span
                         className={`chip status ${String(
-                          t.status || ""
+                          t.status || "",
                         ).toLowerCase()}`}
                       >
                         {t.status}
@@ -844,7 +860,7 @@ export default function AdminPage() {
                     <td>
                       <span
                         className={`chip prio ${String(
-                          t.priority || ""
+                          t.priority || "",
                         ).toLowerCase()}`}
                       >
                         {t.priority}

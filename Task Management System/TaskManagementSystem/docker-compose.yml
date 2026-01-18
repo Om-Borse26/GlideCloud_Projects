@@ -21,5 +21,49 @@ services:
     ports:
       - "${MONGO_EXPRESS_PORT:-8082}:8081"
 
+  backend:
+    build:
+      context: ./backend
+    container_name: tms-backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      SERVER_PORT: 8081
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/task_management_system
+
+      # Dev-safe default. Override in your shell or a local .env (do not commit).
+      JWT_SECRET: ${JWT_SECRET:-dev-docker-jwt-secret-change-me-1234567890}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+
+      # Needed if you access the API directly from the browser; harmless when using the nginx proxy.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+
+      TASKS_ARCHIVE_DONE_AFTER_DAYS: ${TASKS_ARCHIVE_DONE_AFTER_DAYS:-1}
+      # Optional local-dev bootstrap admin user (set in a local root .env; do not commit).
+      APP_BOOTSTRAP_ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      APP_BOOTSTRAP_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+
+      # Email (optional). If enabled, the backend will send emails as before.
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_FROM: ${MAIL_FROM:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      CLIENT_BASE_URL: ${CLIENT_BASE_URL:-http://localhost:5173}
+    ports:
+      - "8081:8081"
+
+  client:
+    build:
+      context: ./client
+    container_name: tms-client
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
 volumes:
   mongo_data:

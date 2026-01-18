@@ -81,6 +81,12 @@ public class Task {
      */
     private String createdByUserId;
 
+    /**
+     * Optional shared discussion/thread id.
+     * When present, comments + decisions are stored in a shared document so all assignees can see the same discussion.
+     */
+    private String sharedDiscussionId;
+
     public Task() {
     }
 
@@ -282,5 +288,13 @@ public class Task {
 
     public void setCreatedByUserId(String createdByUserId) {
         this.createdByUserId = createdByUserId;
+    }
+
+    public String getSharedDiscussionId() {
+        return sharedDiscussionId;
+    }
+
+    public void setSharedDiscussionId(String sharedDiscussionId) {
+        this.sharedDiscussionId = sharedDiscussionId;
     }
 }

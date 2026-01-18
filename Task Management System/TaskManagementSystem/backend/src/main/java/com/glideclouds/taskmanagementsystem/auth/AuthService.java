@@ -9,12 +9,14 @@ import com.glideclouds.taskmanagementsystem.users.User;
 import com.glideclouds.taskmanagementsystem.users.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
 public class AuthService {
@@ -46,13 +48,17 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password())
-        );
+        String email = request.email().trim().toLowerCase();
+        try {
+            authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, request.password())
+            );
+        } catch (AuthenticationException e) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Invalid email or password");
+        }
 
-        // Authentication succeeded; load user to issue JWT with userId as subject.
-        User user = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid email or password"));
 
         return new AuthResponse(jwtService.generateToken(user));
     }
