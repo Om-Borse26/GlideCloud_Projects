@@ -49,6 +49,8 @@ Below are screenshots of the main features and pages of the Task Management Syst
   - Archived page shows archived items with unarchive
 - Offline-friendly UX (client queues requests when offline and replays when online)
 - Admin dashboard (ADMIN role): global tasks overview + group/user assignment
+- API Documentation: Swagger UI with grouped views (Auth, Admin, User)
+- Test Coverage: Jacoco integration for backend code analysis
 - Optional email notifications
 
 ## Prerequisites
@@ -130,7 +132,9 @@ Docker URLs:
 Notes:
 
 - Data persistence: MongoDB uses a named volume (`mongo_data`). Your users/tasks persist across restarts. If you run `docker compose down -v`, the volume is removed and all data is wiped.
-- Admin bootstrap (Docker): set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as environment variables for the backend (recommended via a local root `.env`, never commit). On startup the backend will create/promote that user to ADMIN automatically.
+- Admin bootstrap (Docker): The `.env` file configures the default admin user.
+  - **Email**: `admin@example.com`
+  - **Password**: `Admin@123`
 
 ## Environment Variables
 
@@ -220,8 +224,14 @@ Backend:
 
 ```powershell
 cd backend
-\gradlew.bat test
+./gradlew clean test jacocoTestReport
 ```
+
+### Test Coverage Report (Jacoco)
+
+The project uses Jacoco to generate test coverage reports. After running the command above, you can view the report at `backend/build/reports/jacoco/test/html/index.html`.
+
+![Jacoco Test Report](images/JacocoTestReport.png)
 
 Note: some tests may use Testcontainers (Docker required).
 
