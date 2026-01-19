@@ -65,9 +65,31 @@ class TaskControllerTest extends AbstractMongoIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void createTask_emptyTitle_fails() throws Exception {
+        String token = registerAndLogin("val@test.com", "Pass123!");
+        String body = objectMapper.writeValueAsString(new CreateBody("", "desc", "MEDIUM")); // empty title
+
+        mvc.perform(post("/api/tasks")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateTask_missingId_fails() throws Exception {
+        String token = registerAndLogin("missing@test.com", "Pass123!");
+        mvc.perform(get("/api/tasks/non-existent-id")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
     private String registerAndLogin() throws Exception {
-        String email = "user2@example.com";
-        String password = "Password123!";
+        return registerAndLogin("user2@example.com", "Password123!");
+    }
+
+    private String registerAndLogin(String email, String password) throws Exception {
 
         mvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -37,5 +37,48 @@ class AuthControllerTest extends AbstractMongoIntegrationTest {
                 .andExpect(jsonPath("$.token").isString());
     }
 
+    @Test
+    void register_duplicateEmail_fails() throws Exception {
+        String email = "dup@example.com";
+        String password = "Password123!";
+        Body body = new Body(email, password);
+
+        // First registration
+        mvc.perform(post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isCreated());
+
+        // duplicate
+        mvc.perform(post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void login_wrongPassword_fails() throws Exception {
+        String email = "wrongpass@example.com";
+        String password = "Password123!";
+        
+        mvc.perform(post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new Body(email, password))))
+                .andExpect(status().isCreated());
+
+        mvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new Body(email, "WrongOne!"))))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void login_nonExistentUser_fails() throws Exception {
+         mvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new Body("ghost@example.com", "anypass"))))
+                .andExpect(status().isUnauthorized());
+    }
+
     private record Body(String email, String password) {}
 }
